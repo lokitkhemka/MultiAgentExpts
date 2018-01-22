@@ -128,13 +128,13 @@ class GameACLSTMNetwork(GameACNetwork):
         with tf.device(self._device), tf.variable_scope(scope_name) as scope:
 
             # lstm
-            self.lstm = tf.contrib.rnn.BasicLSTMCell(256, state_is_tuple=True)
+            self.lstm = tf.contrib.rnn.BasicLSTMCell(20, state_is_tuple=True)
 
             # state (input)
             self.s = tf.placeholder("float", [None, state_size])
-            self.s2 = tf.placeholder("float", [None, 1])
+            self.s2 = tf.placeholder("float", [None, 3])
 
-            self.W_fc3, self.b_fc3 = self._fc_variable([256, 1])
+            self.W_fc3, self.b_fc3 = self._fc_variable([20, 1])
 
             h_fc1 = fc(self.s, 30, name='fc1')
             h_fc2 = fc(h_fc1, 20, name='fc1')
@@ -176,7 +176,7 @@ class GameACLSTMNetwork(GameACNetwork):
             self.pi = tf.nn.softmax(
                 tf.matmul(lstm_outputs, self.W_fc2) + self.b_fc2)
 
-            self.W_fcx, self.b_fcx = self._fc_variable([1, 5])
+            self.W_fcx, self.b_fcx = self._fc_variable([3, 5])
             # policy (output)
             self.pi2 = tf.nn.softmax(
                 tf.matmul(self.s2, self.W_fcx) + self.b_fcx)
@@ -192,15 +192,16 @@ class GameACLSTMNetwork(GameACNetwork):
             self.reset_state()
 
     def reset_state(self):
-        self.lstm_state_out = tf.contrib.rnn.LSTMStateTuple(np.zeros([1, 256]),
-                                                            np.zeros([1, 256]))
+        self.lstm_state_out = tf.contrib.rnn.LSTMStateTuple(np.zeros([1, 20]),
+                                                            np.zeros([1, 20]))
 
-    def run_policy_and_value(self, sess, s_t):
+    def run_policy_and_value(self, sess, s_t, s2):
         # This run_policy_and_value() is used when forward propagating.
         # so the step size is 1.
         pi2_out, pi_out, v_out, self.lstm_state_out = sess.run(
             [self.pi2, self.pi, self.v, self.lstm_state],
             feed_dict={self.s: [s_t],
+                       self.s2: [s2],
                        self.initial_lstm_state0: self.lstm_state_out[0],
                        self.initial_lstm_state1: self.lstm_state_out[1],
                        self.step_size: [1]})

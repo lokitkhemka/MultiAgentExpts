@@ -44,7 +44,7 @@ global_t = 0
 
 stop_requested = False
 
-global_network = GameACLSTMNetwork(ACTION_SIZE, -1, device)
+global_network = GameACLSTMNetwork(ACTION_SIZE, -1, 11, device)
 
 
 training_threads = []
@@ -81,13 +81,14 @@ summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter(LOG_FILE, sess.graph)
 
 # init or load checkpoint with saver
-saver = tf.train.Saver()
+saver = tf.train.Saver(max_to_keep=2)
 checkpoint = tf.train.get_checkpoint_state(CHECKPOINT_DIR)
 if checkpoint and checkpoint.model_checkpoint_path:
     saver.restore(sess, checkpoint.model_checkpoint_path)
     print("checkpoint loaded:", checkpoint.model_checkpoint_path)
     tokens = checkpoint.model_checkpoint_path.split("-")
     # set global step
+    print(tokens[1])
     global_t = int(tokens[1])
     print(">>> global step set: ", global_t)
     # set wall time

@@ -1,0 +1,3 @@
+[submodule "MultiAgentDomains"]
+	path = MultiAgentDomains
+	url = https://github.com/Red-devilz/MultiAgentDomains

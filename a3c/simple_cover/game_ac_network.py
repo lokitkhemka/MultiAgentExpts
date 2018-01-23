@@ -34,7 +34,7 @@ class GameACNetwork(object):
 
             # policy loss (output)  (Adding minus, because the original paper's objective function is for gradient ascent, but we use gradient descent optimizer.)
             policy_loss = - tf.reduce_sum(tf.reduce_sum(
-                tf.mul(log_pi, self.a), reduction_indices=1) * self.td + entropy * entropy_beta)
+                tf.multiply(log_pi, self.a), reduction_indices=1) * self.td + entropy * entropy_beta)
 
             # R (input for value)
             self.r = tf.placeholder("float", [None])
@@ -114,18 +114,18 @@ class GameACFFNetwork(GameACNetwork):
         with tf.device(self._device), tf.variable_scope(scope_name):
 
             # weight for policy output layer
-            self.W_fc2, self.b_fc2 = self._fc_variable([20, 5])
+            self.W_fc2, self.b_fc2 = self._fc_variable([15, 5])
 
             # weight for value output layer
-            self.W_fc3, self.b_fc3 = self._fc_variable([20, 1])
+            self.W_fc3, self.b_fc3 = self._fc_variable([15, 1])
 
             # state (input)
-            self.s = tf.placeholder("float", [None, 18])
+            self.s = tf.placeholder("float", [None, 10])
 
             h_fc1 = fc(self.s, 30, name='fc1')
-            h_fc2 = fc(h_fc1.s, 20, name='fc2')
-            h_fc3 = fc(h_fc2.s, 20, name='fc3')
-            h_fc4 = fc(h_fc3.s, 15, name='fc4')
+            h_fc2 = fc(h_fc1, 20, name='fc2')
+            h_fc3 = fc(h_fc2, 20, name='fc3')
+            h_fc4 = fc(h_fc3, 15, name='fc4')
 
             # policy (output)
             self.pi = tf.nn.softmax(tf.matmul(h_fc4, self.W_fc2) + self.b_fc2)

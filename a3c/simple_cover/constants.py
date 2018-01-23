@@ -20,6 +20,6 @@ GRAD_NORM_CLIP = 40.0  # gradient norm clipping
 USE_GPU = False  # To use GPU, set True
 
 
-GAME = 0
+GAME = 1
 
 #  0 : simple_speak

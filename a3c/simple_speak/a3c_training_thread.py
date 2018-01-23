@@ -135,7 +135,7 @@ class A3CTrainingThread(object):
 
             if self.epSteps >= 100:
                 self.epSteps = 0
-                if(self.thread_indexi == 0 and self.local_t % LOG_INTERVAL == 0):
+                if(self.thread_index == 0 and self.local_t % LOG_INTERVAL == 0):
                     print("score={}".format(self.episode_reward))
 
                     self._record_score(sess, summary_writer, summary_op,

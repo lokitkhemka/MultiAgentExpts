@@ -12,7 +12,7 @@ class GridEnv(MultiAgentGrid):
         self.gridSize = gridSize
         self.numAgents = nAgents
         self.defineMoves()
-        self.reset_world(nAgents, gridSize)
+        self.reset_world()
 
         if seed is not None:
             np.random.seed(seed)

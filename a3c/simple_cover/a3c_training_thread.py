@@ -32,7 +32,7 @@ class A3CTrainingThread(object):
 
         # STATE_SIZE = 6 - 3 Landmarks + 5 (comm-size)
         self.local_network = GameACFFNetwork(
-            ACTION_SIZE, thread_index, 11, device)
+            ACTION_SIZE, thread_index, device)
 
         self.local_network.prepare_loss(ENTROPY_BETA)
 
@@ -98,19 +98,17 @@ class A3CTrainingThread(object):
 
         start_local_t = self.local_t
 
-        start_lstm_state = self.local_network.lstm_state_out
-
         # t_max times loop
         for i in range(LOCAL_T_MAX):
             pi_, value_ = self.local_network.run_policy_and_value(
-                sess, self.game_state.s1_t)
+                sess, np.concatenate([self.game_state.s1_t, [self.epSteps]]))
             pi2_, value2_ = self.local_network.run_policy_and_value(
-                sess, self.game_state.s2_t)
+                sess, np.concatenate([self.game_state.s2_t, [self.epSteps]]))
             action = self.choose_action(pi_)
             action2 = self.choose_action(pi2_)
 
-            states.append(np.concat([self.game_state.s1_t, [self.epSteps]]))
-            states2.append(np.concat([self.game_state.s2_t, [self.epSteps]]))
+            states.append(np.concatenate([self.game_state.s1_t, [self.epSteps]]))
+            states2.append(np.concatenate([self.game_state.s2_t, [self.epSteps]]))
 
             actions.append(action)
             actions2.append(action2)
@@ -142,7 +140,7 @@ class A3CTrainingThread(object):
 
             if self.epSteps >= 100:
                 self.epSteps = 0
-                if(self.thread_indexi == 0 and self.local_t % LOG_INTERVAL == 0):
+                if(self.thread_index == 0 and self.local_t % LOG_INTERVAL == 0):
                     print("score={}".format(self.episode_reward))
 
                     self._record_score(sess, summary_writer, summary_op,
@@ -155,8 +153,8 @@ class A3CTrainingThread(object):
                 break
 
         R = 0.0
-        R = self.local_network.run_value(sess, self.game_state.s1_t)
-        R2 = self.local_network.run_value(sess, self.game_state.s2_t)
+        R = self.local_network.run_value(sess, np.concatenate([self.game_state.s1_t, [self.epSteps]]))
+        R2 = self.local_network.run_value(sess, np.concatenate([self.game_state.s2_t, [self.epSteps]]))
 
         actions.reverse()
         actions2.reverse()
@@ -197,7 +195,7 @@ class A3CTrainingThread(object):
             batch_td.append(td)
             batch_td2.append(td2)
             batch_R.append(R)
-            batch_R.append(R2)
+            batch_R2.append(R2)
 
         cur_learning_rate = self._anneal_learning_rate(global_t)
 
@@ -217,7 +215,6 @@ class A3CTrainingThread(object):
                 self.local_network.a: batch_a,
                 self.local_network.td: batch_td,
                 self.local_network.r: batch_R,
-                self.local_network.step_size: [len(batch_a)],
                 self.learning_rate_input: cur_learning_rate})
 
         sess.run(
@@ -227,8 +224,6 @@ class A3CTrainingThread(object):
                 self.local_network.a: batch_a2,
                 self.local_network.td: batch_td2,
                 self.local_network.r: batch_R2,
-                self.local_network.initial_lstm_state: start_lstm_state,
-                self.local_network.step_size: [len(batch_a)],
                 self.learning_rate_input: cur_learning_rate})
 
         if (self.thread_index == 0) and \

@@ -109,8 +109,8 @@ class A3CTrainingThread(object):
             action = self.choose_action(pi_)
             action2 = self.choose_action(pi2_)
 
-            states.append(self.game_state.s1_t)
-            states2.append(self.game_state.s2_t)
+            states.append(np.concat([self.game_state.s1_t, [self.epSteps]]))
+            states2.append(np.concat([self.game_state.s2_t, [self.epSteps]]))
 
             actions.append(action)
             actions2.append(action2)

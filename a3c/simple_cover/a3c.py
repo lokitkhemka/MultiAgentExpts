@@ -7,7 +7,7 @@ import math
 import os
 import time
 
-from game_ac_network import GameACLSTMNetwork
+from game_ac_network import GameACFFNetwork
 from a3c_training_thread import A3CTrainingThread
 from rmsprop_applier import RMSPropApplier
 
@@ -44,7 +44,7 @@ global_t = 0
 
 stop_requested = False
 
-global_network = GameACLSTMNetwork(ACTION_SIZE, -1, 11, device)
+global_network = GameACFFNetwork(ACTION_SIZE, -1, 18, device)
 
 
 training_threads = []

@@ -137,8 +137,8 @@ class GameACLSTMNetwork(GameACNetwork):
             self.W_fc3, self.b_fc3 = self._fc_variable([20, 1])
 
             h_fc1 = fc(self.s, 30, name='fc1')
-            h_fc2 = fc(h_fc1, 20, name='fc1')
-            h_fc3 = fc(h_fc2, 20, name='fc1')
+            h_fc2 = fc(h_fc1, 20, name='fc2')
+            h_fc3 = fc(h_fc2, 20, name='fc3')
 
             h_fc3_reshaped = tf.reshape(h_fc3, [1, -1, 20])
             # h_fc_reshaped = (1,5,256)

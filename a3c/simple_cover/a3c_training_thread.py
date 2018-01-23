@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 from game_state import GameState
-from game_ac_network import GameACLSTMNetwork
+from game_ac_network import GameACFFNetwork
 
 from constants import GAMMA
 from constants import LOCAL_T_MAX
@@ -30,7 +30,8 @@ class A3CTrainingThread(object):
         self.learning_rate_input = learning_rate_input
         self.max_global_time_step = max_global_time_step
 
-        self.local_network = GameACLSTMNetwork(
+        # STATE_SIZE = 6 - 3 Landmarks + 5 (comm-size)
+        self.local_network = GameACFFNetwork(
             ACTION_SIZE, thread_index, 11, device)
 
         self.local_network.prepare_loss(ENTROPY_BETA)
@@ -87,9 +88,10 @@ class A3CTrainingThread(object):
         states = []
         states2 = []
         actions = []
-        comms = []
+        actions2 = []
         rewards = []
         values = []
+        values2 = []
 
         # copy weights from shared to local
         sess.run(self.sync)
@@ -100,19 +102,24 @@ class A3CTrainingThread(object):
 
         # t_max times loop
         for i in range(LOCAL_T_MAX):
-            pi_, comm_, value_ = self.local_network.run_policy_and_value(
-                sess, self.game_state.s_t, self.game_state.s2)
+            pi_, value_ = self.local_network.run_policy_and_value(
+                sess, self.game_state.s1_t)
+            pi2_, value2_ = self.local_network.run_policy_and_value(
+                sess, self.game_state.s2_t)
             action = self.choose_action(pi_)
-            comm = self.choose_action(comm_)
+            action2 = self.choose_action(pi2_)
 
-            states.append(self.game_state.s_t)
-            states2.append(self.game_state.s2)
+            states.append(self.game_state.s1_t)
+            states2.append(self.game_state.s2_t)
+
             actions.append(action)
-            comms.append(comm)
+            actions2.append(action2)
+
             values.append(value_)
+            values2.append(value2_)
 
             # process game
-            self.game_state.process(action, comm)
+            self.game_state.process([action, action2])
 
             # receive game result
             reward = self.game_state.reward
@@ -148,57 +155,78 @@ class A3CTrainingThread(object):
                 break
 
         R = 0.0
-        R = self.local_network.run_value(sess, self.game_state.s_t)
+        R = self.local_network.run_value(sess, self.game_state.s1_t)
+        R2 = self.local_network.run_value(sess, self.game_state.s2_t)
 
         actions.reverse()
+        actions2.reverse()
         states.reverse()
         states2.reverse()
         rewards.reverse()
         values.reverse()
-        comms.reverse()
+        values2.reverse()
 
         batch_si = []
-        batch_s2 = []
+        batch_s2i = []
         batch_a = []
-        batch_c = []
+        batch_a2 = []
         batch_td = []
+        batch_td2 = []
         batch_R = []
+        batch_R2 = []
 
         # compute and accmulate gradients
-        for(ai, ri, si, Vi, ci, s2i) in zip(actions, rewards, states, values, comms, states2):
+        for(ai, a2i, ri, si, s2i, Vi, V2i) in zip(actions, actions2, rewards,
+                                                  states, states2, values, values2):
+
             R = ri + GAMMA * R
+            R2 = ri + GAMMA * R2
             td = R - Vi
-            a = np.zeros([ACTION_SIZE])
+            td2 = R2 - V2i
+
+            a = np.zeros([5])
             a[ai] = 1
 
-            c = np.zeros([5])
-            c[ci] = 1
+            a2 = np.zeros([5])
+            a2[a2i] = 1
 
             batch_si.append(si)
-            batch_s2.append(s2i)
+            batch_s2i.append(s2i)
             batch_a.append(a)
-            batch_c.append(c)
+            batch_a2.append(a2)
             batch_td.append(td)
+            batch_td2.append(td2)
             batch_R.append(R)
+            batch_R.append(R2)
 
         cur_learning_rate = self._anneal_learning_rate(global_t)
 
         batch_si.reverse()
-        batch_s2.reverse()
+        batch_s2i.reverse()
         batch_a.reverse()
-        batch_c.reverse()
+        batch_a2.reverse()
         batch_td.reverse()
+        batch_td2.reverse()
         batch_R.reverse()
+        batch_R2.reverse()
 
         sess.run(
             self.apply_gradients,
             feed_dict={
                 self.local_network.s: batch_si,
                 self.local_network.a: batch_a,
-                self.local_network.comm: batch_c,
-                self.local_network.s2: batch_s2,
                 self.local_network.td: batch_td,
                 self.local_network.r: batch_R,
+                self.local_network.step_size: [len(batch_a)],
+                self.learning_rate_input: cur_learning_rate})
+
+        sess.run(
+            self.apply_gradients,
+            feed_dict={
+                self.local_network.s: batch_s2i,
+                self.local_network.a: batch_a2,
+                self.local_network.td: batch_td2,
+                self.local_network.r: batch_R2,
                 self.local_network.initial_lstm_state: start_lstm_state,
                 self.local_network.step_size: [len(batch_a)],
                 self.learning_rate_input: cur_learning_rate})
